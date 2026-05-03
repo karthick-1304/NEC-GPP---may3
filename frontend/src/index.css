@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root { height: 100%; }
+  body {
+    @apply bg-slate-50 text-slate-800 font-sans antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  /* Better focus rings for keyboard nav */
+  :focus-visible {
+    @apply outline-none ring-2 ring-amber-400 ring-offset-2 ring-offset-white rounded;
+  }
+  /* Hide native number-input spinners (used in score/threshold fields) */
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type='number'] { -moz-appearance: textfield; }
+}
+
+@layer components {
+  /* Subtle gradient backgrounds we reuse */
+  .bg-brand-gradient {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2c479a 60%, #3a5cb6 100%);
+  }
+  .bg-brand-gradient-soft {
+    background: linear-gradient(135deg, #eff3fb 0%, #ffffff 70%);
+  }
+  .bg-mesh {
+    background-image:
+      radial-gradient(at 14% 12%, rgba(251,191,36,0.18) 0px, transparent 50%),
+      radial-gradient(at 80% 0%,  rgba(30,58,138,0.10) 0px, transparent 60%),
+      radial-gradient(at 0% 100%, rgba(58,92,182,0.10) 0px, transparent 50%);
+  }
+  /* Card base */
+  .card {
+    @apply bg-white rounded-2xl shadow-card border border-slate-100;
+  }
+  .card-hover {
+    @apply transition-all duration-200 hover:shadow-card-hover hover:-translate-y-0.5;
+  }
+  /* Skeleton */
+  .skeleton {
+    background: linear-gradient(90deg, #e2e8f0 0%, #f1f5f9 50%, #e2e8f0 100%);
+    background-size: 200% 100%;
+    @apply animate-shimmer rounded;
+  }
+}
+
+/* Custom scrollbar — subtle */
+::-webkit-scrollbar       { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; border: 2px solid #f8fafc; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* ─── Sonner toast close-button anchor override ─────────────────────────────
+   Sonner's default styles pin the close (×) button to the top-left of the
+   toast (top: 0; left: 0; transform: translate(-50%, -50%)) which lands it
+   *outside* the box. We re-anchor it to the top-right INSIDE the toast.
+   The CSS variables (--toast-close-button-start/-end) only flip the side —
+   they don't override the top/transform — so an explicit override is needed. */
+[data-sonner-toaster] [data-close-button] {
+  top: 0.5rem !important;
+  left: auto !important;
+  right: 0.5rem !important;
+  transform: none !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #475569 !important;
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+  border-radius: 9999px !important;
+}
+[data-sonner-toaster] [data-close-button]:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}

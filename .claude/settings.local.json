@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/ponka/Downloads/**)",
+      "Bash(extract-text frontend_necgpp.docx)",
+      "Bash(mkdir -p /tmp/fe_unpacked)",
+      "Bash(python /c/Users/ponka/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/9581a04d-809f-4820-b04f-9fe854358b1a/424d7e8f-0476-42a6-8554-5e6fd46d9cfe/skills/docx/scripts/office/unpack.py /c/Users/ponka/Downloads/frontend_necgpp.docx /tmp/fe_unpacked)",
+      "Bash(mkdir -p \"/c/Users/ponka/Downloads/_fe_unpacked\")",
+      "Bash(python /c/Users/ponka/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/9581a04d-809f-4820-b04f-9fe854358b1a/424d7e8f-0476-42a6-8554-5e6fd46d9cfe/skills/docx/scripts/office/unpack.py /c/Users/ponka/Downloads/frontend_necgpp.docx /c/Users/ponka/Downloads/_fe_unpacked)",
+      "Bash(npm run *)",
+      "Bash(pdftotext -layout \"C:/Users/ponka/Downloads/updates_necgpp.pdf\" \"C:/Users/ponka/Downloads/_updates.txt\")",
+      "Bash(node ../frontend/public/samples/_generate.mjs)",
+      "Bash(cat)",
+      "Bash(node /tmp/_gen_xlsx.cjs)",
+      "Bash(node ./_gen_xlsx.cjs)",
+      "Bash(rm -f ./_gen_xlsx.cjs)",
+      "Bash(node --check src/services/email.service.js)",
+      "Bash(node --check src/services/emailGate.service.js)",
+      "Bash(node --check src/services/questionParse.service.js)",
+      "Bash(node --check src/controllers/system.controller.js)",
+      "Bash(node --check src/controllers/test.controller.js)"
+    ]
+  }
+}
