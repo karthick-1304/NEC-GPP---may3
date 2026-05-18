@@ -99,7 +99,7 @@ export default function App() {
       </Route>
 
       {/* ─── 404 → home ─────────────────────────────────────────────── */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/practice" replace />} />
     </Routes>
   );
 }

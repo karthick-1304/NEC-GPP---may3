@@ -407,7 +407,7 @@ export default function PracticeAttemptPage() {
                   <div className="text-xl font-bold text-amber-800 mt-0.5 font-mono">{counts.flagged}</div>
                 </div>
               </div>
-              <p className="mt-3 text-sm">You won't be able to change your answers after submission.</p>
+              <p className="mt-3 text-sm">Once submitted, you won't be able to change your answers.</p>
             </>
           );
         })()}
@@ -499,7 +499,7 @@ function FullscreenNotice({ onResume }: { onResume: () => void }) {
         </div>
         <h2 className="mt-4 font-display font-bold text-navy-900 text-lg">Return to fullscreen</h2>
         <p className="mt-2 text-sm text-slate-600 leading-relaxed">
-          Practice attempts must run in fullscreen. Your answers and timer are preserved — just hit the button to continue.
+          Practice attempts must run in fullscreen. Your answers are still preserved — just hit the button to continue your attempt.
         </p>
         <Button className="mt-5 w-full" leftIcon={<Maximize2 className="h-4 w-4" />} onClick={onResume}>
           Resume in fullscreen

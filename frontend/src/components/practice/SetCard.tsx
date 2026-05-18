@@ -185,7 +185,7 @@ export const SetCard = ({ set, isCollaborator, isSuperAccess }: Props) => {
       <ConfirmDialog
         open={confirmDelete} onOpenChange={setConfirmDelete}
         title={`Delete ${set.set_name ?? 'this set'}?`}
-        description="The set, its questions (if not used elsewhere), and student attempts will be permanently deleted. A core + attempts export is emailed to collaborators."
+        description="The set and student attempts in this set will be permanently deleted. A core + students attempts of this set is emailed to collaborators automatically."
         confirmText="Delete set"
         destructive
         loading={removeMut.isPending}

@@ -128,7 +128,7 @@ function MyWardsTab() {
       <ConfirmDialog
         open={!!toRemove} onOpenChange={(o) => !o && setToRemove(null)}
         title={`Remove ${toRemove?.full_name}?`}
-        description="They will no longer be your tutorward and become available again for any tutor in their department."
+        description="They will be no longer in your tutorward and become available again for any tutor in their department."
         confirmText="Remove"
         destructive
         loading={removeMut.isPending}

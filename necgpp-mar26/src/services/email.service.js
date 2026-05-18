@@ -126,7 +126,7 @@ export const sendUserEditedNotice = async (user, editorUserId) => {
   const adminEmails = await getAdminEmails();
   const adminHtml = templates.adminActionSummaryTemplate(
     'User Profile Updated',
-    `Administrator (ID: ${editorUserId}) has updated the profile for user: <strong>${user.full_name}</strong>.`,
+    `Administrator (USER ID: ${editorUserId}) has updated the profile for user: <strong>${user.full_name}</strong>.`,
     [`Email: ${user.email}`, `Role: ${user.role}`]
   );
   await bulkSend({ to: adminEmails, subject: `System Notification: User Profile Update`, html: adminHtml });
@@ -137,7 +137,7 @@ export const sendUserDeletedNotice = async (userName, userEmail, userRole, edito
   const adminEmails = await getAdminEmails();
   const html = templates.adminActionSummaryTemplate(
     'User Deleted',
-    `Administrator (ID: ${editorUserId}) has permanently deleted a user account.`,
+    `Administrator (USER ID: ${editorUserId}) has permanently deleted a user account.`,
     [`Name: ${userName}`, `Email: ${userEmail}`, `Role: ${userRole}`]
   );
   await bulkSend({ to: adminEmails, subject: `System Notification: User Deletion`, html });
@@ -148,7 +148,7 @@ export const sendBulkDeletionSummary = async (count, details, editorUserId) => {
   const adminEmails = await getAdminEmails();
   const html = templates.adminActionSummaryTemplate(
     'Bulk Deletion Executed',
-    `Administrator (ID: ${editorUserId}) has performed a bulk deletion.`,
+    `Administrator (USERID: ${editorUserId}) has performed a bulk deletion.`,
     [`Action: ${details}`, `Records removed: ${count}`]
   );
   await bulkSend({ to: adminEmails, subject: `System Notification: Bulk Deletion`, html });
@@ -173,11 +173,16 @@ export const sendPasswordChangedEmail = async (user) => {
   await sendEmail({ to: user.email, subject: 'Security Alert: Password Changed', html });
 };
 
+export const sendPasswordResetConfirmationEmail = async (user) => {
+  const html = templates.resetPasswordSuccessTemplate(user.full_name);
+  await sendEmail({ to: user.email, subject: 'Password Reset Confirmation', html });
+};
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // SUBJECT EMAILS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export const sendSubjectCreatedMails = async (subject, collaboratorDeptIds, allDeptIds) => {
+export const sendSubjectCreatedMails = async (subject, collaboratorDeptIds, allDeptIds, notify) => {
   if (await suppressed(`Subject created: ${subject?.subject_name}`)) return;
   const allHeadRows = await executeQuery(
     `SELECT u.email, d.dept_id FROM users u
@@ -188,13 +193,15 @@ export const sendSubjectCreatedMails = async (subject, collaboratorDeptIds, allD
   const nonCollaboratorEmails = allHeadRows.filter(r => !collaboratorDeptIds.includes(r.dept_id)).map(r => r.email);
   const adminEmails = await getAdminEmails();
 
-  // (a) To Non-Collaborators
-  const htmlNotice = templates.subjectCreatedNoticeTemplate(subject.subject_name, subject.creator || 'Admin');
-  await bulkSend({
-    to: nonCollaboratorEmails,
-    subject: `New Subject: ${subject.subject_name}`,
-    html: htmlNotice
-  });
+  if(notify){
+    // (a) To Non-Collaborators
+    const htmlNotice = templates.subjectCreatedNoticeTemplate(subject.subject_name, subject.creator || 'Admin');
+    await bulkSend({
+      to: nonCollaboratorEmails,
+      subject: `New Subject: ${subject.subject_name}`,
+      html: htmlNotice
+    });
+  }
 
   // (b) To Collaborators + Admins
   const htmlAdmin = templates.subjectCreatedAdminTemplate(subject.subject_name, subject.creator || 'Admin');
@@ -231,12 +238,13 @@ export const sendSubjectLockMail = async (subjectId, subjectName, locked) => {
 export const sendDeptViewLockMail = async (deptId, subjectName, locked) => {
   if (await suppressed(`Dept view lock: ${subjectName}`)) return;
   const memberEmails = await getDeptMemberEmails(deptId);
+  const headEmail = await getDeptHeadEmail(deptId);
   const action = locked ? 'Hidden' : 'Visible';
   const html = templates.genericNotificationTemplate(
     'Visibility Changed',
-    `The subject <strong>${subjectName}</strong> is now <strong>${action.toLowerCase()}</strong> for your department based on your Department Head's settings.`
+    `The subject <strong>${subjectName}</strong> is now <strong>${action.toLowerCase()}</strong> for your department in effect of your Department Head's settings.`
   );
-  await bulkSend({ to: memberEmails, subject: `Visibility Change: ${subjectName}`, html });
+  await bulkSend({ to: [...memberEmails,...headEmail], subject: `Visibility Change: ${subjectName}`, html });
 };
 
 export const sendCollaboratorAddedMail = async (subjectId, subjectName, addedDeptName) => {
@@ -273,15 +281,24 @@ export const sendCollaboratorRemovedMail = async (subjectId, subjectName, remove
   }
 };
 
-export const sendCollaboratorLeftMail = async (subjectId, subjectName, leftDeptName) => {
+export const sendCollaboratorLeftMail = async (subjectId, subjectName, deptId, leftDeptName) => {
   if (await suppressed(`Collaborator left: ${subjectName}`)) return;
   const collaboratorEmails = await getCollaboratorEmails(subjectId);
   const adminEmails = await getAdminEmails();
+  const leftHeadEmail = await getDeptHeadEmail(deptId);
   const html = templates.genericNotificationTemplate(
     'Collaborator Left',
     `Department <strong>${leftDeptName}</strong> has chosen to leave the subject <strong>${subjectName}</strong>.`
   );
   await bulkSend({ to: [...collaboratorEmails, ...adminEmails], subject: `Collaborator Left: ${subjectName}`, html });
+   // Notice to the removed department head
+  if (leftHeadEmail) {
+    const htmlRemoved = templates.genericNotificationTemplate(
+      'Access Lost',
+      `Your department's collaborating access to the subject <strong>${subjectName}</strong> has been lost because you left from the subject.`
+    );
+    await sendEmail({ to: leftHeadEmail, subject: `Subject Access Lost: ${subjectName}`, html: htmlRemoved });
+  }
 };
 
 export const sendJoinRequestMail = async (subjectId, subjectName, requestingDeptName) => {

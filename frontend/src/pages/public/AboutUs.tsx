@@ -161,9 +161,9 @@ export default function AboutUsPage() {
               <Sparkles className="h-5 w-5 text-amber-500" /> Built in-house
             </h2>
             <p>
-              This platform was envisioned, designed, and developed end-to-end by NEC faculty and
-              students for the specific way our departments coach for GATE — collaborative practice
-              between departments, transparent progress for tutors, and exam-grade test conditions.
+              This platform was envisioned, designed, and developed end-to-end by NEC students (A team from 2022-2026 Batch Year) 
+              for the specific way our departments coach for GATE — collaborative practice
+              between departments, transparent progress for monitoring, and gate-grade test conditions.
             </p>
           </div>
         </div>
@@ -180,7 +180,7 @@ export default function AboutUsPage() {
             Guided by
           </h2>
           <p className="text-slate-500 text-sm mt-1.5">
-            The faculty who shaped the platform's direction
+            The faculty who provided key directives of this platform
           </p>
         </div>
 
@@ -211,7 +211,7 @@ export default function AboutUsPage() {
             Built by NEC students
           </h2>
           <p className="text-slate-500 text-sm mt-1.5">
-            Final-year CSE undergraduates of the 2022–26 batch
+            The full-stack minds behind the architecture, interface design, and logic flows.
           </p>
         </div>
 

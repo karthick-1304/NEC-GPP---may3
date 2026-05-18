@@ -21,7 +21,7 @@ export default function HomePage() {
                 Earn it set by set.
               </h1>
               <p className="mt-5 text-base sm:text-lg text-slate-600 max-w-xl leading-relaxed">
-                A focused practice + test platform with gamified progression, real-time leaderboards, and exam-grade scoring rules. Ace concepts at your pace, then prove it under timed conditions.
+                A focused practice + test platform with gamified progression, progress explorer, leaderboard and exam-grade scoring rules. Ace concepts at your pace, then prove it under timed conditions.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link to="/login">
@@ -34,7 +34,7 @@ export default function HomePage() {
 
               <div className="mt-10 grid grid-cols-3 gap-3 max-w-md">
                 {[
-                  { v: 'GATE-grade',  l: 'Scoring rules' },
+                  { v: 'GATE-Grade',  l: 'Scoring rules' },
                   { v: 'Adaptive',    l: 'Practice flow' },
                   { v: 'Multi-Branch',        l: 'Leaderboards' },
                 ].map(s => (
@@ -120,8 +120,8 @@ export default function HomePage() {
               { icon: Target,         title: 'GATE-style scoring',       text: 'MCQ negative marking, MSQ all-or-nothing, NAT tolerance — exactly what you\'ll see on exam day.' },
               { icon: Trophy,         title: 'Where you stand',          text: 'Climb the ranks across your dept, batch, or globally.' },
               { icon: GraduationCap,  title: 'Tutor oversight',          text: 'Tutors track tutorward progress, identify weak topics, and step in early — no student left behind.' },
-              { icon: ShieldCheck,    title: 'Anti-malpractice tests',   text: 'Full-screen lock, tab-switch detection, auto-submit, and 30-minute server evaluation window.' },
-              { icon: Sparkles,       title: 'Intelli-Pick tests',       text: 'Test creators auto-pick fresh questions per topic — no hand-curation needed for weekly drills.' },
+              { icon: ShieldCheck,    title: 'Anti-malpractice tests',   text: 'Full-screen lock, tab-switch detection, auto-submit, and time based server evaluation.' },
+              { icon: Sparkles,       title: 'Intelli-Pick tests',       text: 'Test creators can auto-pick questions per topic — no hand-curation needed for weekly drills.' },
             ].map(f => (
               <div key={f.title} className="card card-hover p-6">
                 <div className="grid h-11 w-11 place-items-center rounded-xl bg-navy-50 text-navy-700">

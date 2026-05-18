@@ -70,15 +70,7 @@ const baseLayout = (content, previewText = '') => `
 /**
  * Auth Templates
  */
-export const forgotPasswordTemplate = (name, resetUrl) => baseLayout(`
-  <h2 style="margin-top: 0; color: ${PRIMARY_COLOR}; font-size: 20px;">Forgot your password?</h2>
-  <p>Hi <strong>${name}</strong>,</p>
-  <p>We received a request to reset your password. You can do this by clicking the button below:</p>
-  <div style="text-align: center; margin: 30px 0;">
-    <a href="${resetUrl}" style="background-color: ${SECONDARY_COLOR}; color: #ffffff; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">Reset Password</a>
-  </div>
-  <p style="font-size: 14px; color: #6b7280;">If you didn't request a password reset, you can safely ignore this email. This link will expire in 1 hour.</p>
-`, 'Password reset request for your GATE Portal account.');
+
 
 export const resetPasswordSuccessTemplate = (name) => baseLayout(`
   <h2 style="margin-top: 0; color: #10b981; font-size: 20px;">Password Reset Successful</h2>

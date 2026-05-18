@@ -337,7 +337,7 @@ function DepartmentsTab() {
   return (
     <>
       <div className="flex items-center justify-between gap-3 mb-4">
-        <p className="text-sm text-slate-500">All academic departments and their HODs.</p>
+        <p className="text-sm text-slate-500">All academic departments</p>
         <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setCreateOpen(true)}>
           Create department
         </Button>

@@ -57,7 +57,7 @@ export const EditSubjectNameDialog = ({ open, onOpenChange, subject }: Props) =>
         </span>
         <div>
           <h2 className="font-display font-bold text-navy-900 text-lg">Edit subject name</h2>
-          <p className="text-sm text-slate-500">Collaborators are notified by email about the change.</p>
+          <p className="text-sm text-slate-500">Collaborators are notified about the change.</p>
         </div>
       </div>
 

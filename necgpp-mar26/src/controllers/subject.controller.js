@@ -264,12 +264,12 @@ export const createSubject = catchAsync(async (req, res) => {
 
   await invalidateSubjectCacheForAll();
   
-  if (notify) {
+  
     const allDepts   = await executeQuery('SELECT dept_id FROM departments');
     const allDeptIds = allDepts.map(d => d.dept_id);
-    sendSubjectCreatedMails({ subject_name }, finalCollabDeptIds, allDeptIds)
+    sendSubjectCreatedMails({ subject_name }, finalCollabDeptIds, allDeptIds, notify)
       .catch(err => logger.error('Subject creation mail failed', { err: err.message }));
-  }
+  
 
   logger.info('Subject created', { subjectId: newSubjectId, creator, userId });
   return successResponse(res, { subject_id: newSubjectId }, 'Subject created successfully.', 201);
@@ -476,7 +476,7 @@ export const leaveSubject = catchAsync(async (req, res) => {
   // Same as removeCollaborator — clears my + other + admin caches
   await invalidateSubjectCacheForDept(deptId);
 
-  sendCollaboratorLeftMail(subject.subject_id, subject.subject_name, deptRows[0].dept_name)
+  sendCollaboratorLeftMail(subject.subject_id, subject.subject_name,deptId, deptRows[0].dept_name)
     .catch(err => logger.error('Leave subject mail failed', { err: err.message }));
 
   return successResponse(res, {}, 'You have left this subject.');

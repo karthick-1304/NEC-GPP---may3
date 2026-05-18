@@ -329,7 +329,7 @@ export default function TestEditorPage({ mode }: Props) {
             />
           </Field>
           <Field label="Duration (minutes)" required error={errors.duration_minutes?.message}
-                 hint="5 to 500 — drives the per-attempt countdown.">
+                 hint="5mins to 500mins — per-attempt countdown.">
             <Input
               type="number" min={5} max={500}
               leftIcon={<Clock className="h-4 w-4" />}
@@ -345,7 +345,7 @@ export default function TestEditorPage({ mode }: Props) {
         <p className="text-xs text-slate-500 mb-3">
           {mode === 'edit' && lockedAssignments.length > 0
             ? 'Existing participation cannot be removed — only new (dept × batch) pairs can be added.'
-            : 'Pick which (department × batch) pairs are assigned this test. At least one pair is required.'}
+            : 'Pick which (batch x department) pairs are assigned this test. At least one pair is required.'}
         </p>
         <AssignmentsPicker
           value={assignments}

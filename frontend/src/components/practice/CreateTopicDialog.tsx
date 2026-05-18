@@ -51,7 +51,7 @@ export const CreateTopicDialog = ({ subjectId, open, onOpenChange }: Props) => {
         </span>
         <div>
           <h2 className="font-display font-bold text-navy-900 text-lg">Create a new topic</h2>
-          <p className="text-sm text-slate-500">It will appear at the end of the topic order.</p>
+          <p className="text-sm text-slate-500">It will appear at the end of the topic order. However you can change the topic display order later.</p>
         </div>
       </div>
       <form onSubmit={handleSubmit(d => m.mutate(d.topic_name.trim()))} noValidate className="space-y-4">

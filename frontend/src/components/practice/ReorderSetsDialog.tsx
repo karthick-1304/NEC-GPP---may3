@@ -99,7 +99,7 @@ export const ReorderSetsDialog = ({ subjectId, topicId, level, open, onOpenChang
         </span>
         <div>
           <h2 className="font-display font-bold text-navy-900 text-lg">Reorder sets — Level {level}</h2>
-          <p className="text-sm text-slate-500">Drag to rearrange. Set numbers update live so you can preview the new path.</p>
+          <p className="text-sm text-slate-500">Drag to rearrange. Click Save to commit.</p>
         </div>
       </div>
 

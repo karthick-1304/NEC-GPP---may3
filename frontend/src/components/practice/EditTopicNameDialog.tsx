@@ -52,7 +52,7 @@ export const EditTopicNameDialog = ({ subjectId, topic, open, onOpenChange }: Pr
         </span>
         <div>
           <h2 className="font-display font-bold text-navy-900 text-lg">Edit topic name</h2>
-          <p className="text-sm text-slate-500">Collaborators are notified by email.</p>
+          <p className="text-sm text-slate-500">Collaborators are notified about the change.</p>
         </div>
       </div>
       <form onSubmit={handleSubmit(d => m.mutate(d.topic_name.trim()))} noValidate className="space-y-4">

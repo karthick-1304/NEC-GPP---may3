@@ -453,7 +453,7 @@ export const resetPassword = catchAsync(async (req, res) => {
   await redisDel(`otp:${email}`, `otp:verified:${email}`, `otp:cooldown:${email}`);
 
   // Send confirmation email
-  emailService.sendPasswordChangedEmail(user)
+  emailService.sendPasswordResetConfirmationEmail(user)
     .catch(err => logger.error('Password reset confirmation mail failed', { err: err.message }));
 
   logger.info('Password reset successfully', { userId: user.user_id });

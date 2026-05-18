@@ -48,7 +48,7 @@ export const QuestionsEditor = forwardRef<QuestionsEditorHandle, Props>(({ initi
       const el = key ? itemRefs.current.get(key) : null;
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        toast.error(`Please fix question ${firstIdx + 1} — ${map.size} question${map.size > 1 ? 's have' : ' has'} errors.`);
+        toast.error(`Please fix errors from question ${firstIdx + 1} . Totally ${map.size} question${map.size > 1 ? 's have' : ' has'} errors.`);
       }
       return null;
     },

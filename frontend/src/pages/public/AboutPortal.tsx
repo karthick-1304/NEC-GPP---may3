@@ -25,7 +25,7 @@ const sections = [
   },
   {
     icon: ClipboardList,
-    title: 'Tests — exam-grade conditions',
+    title: 'Tests - GATE-Grade conditions',
     items: [
       'Two creation modes: Make-Questions and Intelli-Pick (auto-pulls from your practice bank)',
       'Mandatory full-screen mode; tab switches and window changes count as malpractice',
@@ -37,7 +37,7 @@ const sections = [
     title: 'Where you stand',
     items: [
       'Dept heads, tutors, and admins each see a scoped progress view',
-      'Per-student detail card with last attempts and active subjects',
+      'Per-student detail card with last attempts, current learning subjects',
       'Climb the ranks across your dept, batch, or globally.',
     ],
   },
@@ -45,17 +45,17 @@ const sections = [
     icon: Users,
     title: 'Tutorward management',
     items: [
-      'Any staff can be assigned tutorward students from their dept + batch',
-      'Add/remove students by registration number',
+      'Staff can create tutorwardship for students from their dept + tutoring batch',
+      'Add/remove students from their tutorward list',
     ],
   },
   {
     icon: ListChecks,
     title: 'Question types — exactly GATE',
     items: [
-      'MCQ — 1 or 2 marks, negative marking when set has it on',
-      'MSQ — 2 marks, all-or-nothing (no negative)',
-      'NAT — 1 or 2 marks, ±0.0001 tolerance, no negative',
+      'MCQ — 1 or 2 marks, (negative marking if applied)',
+      'MSQ — 2 marks, all-or-nothing (no negative marking)',
+      'NAT — 1 or 2 marks, ±0.0001 tolerance (no negative marking)',
     ],
   },
 ];
@@ -71,7 +71,7 @@ export default function AboutPortalPage() {
           How NEC GATE Portal works
         </h1>
         <p className="mt-4 text-slate-600 max-w-2xl mx-auto leading-relaxed">
-          A quick tour of the workflows the platform was built around — practice, tests, leaderboards, and the access model that ties them together.
+          A quick tour of the platform workflows that was built around — practice, tests, leaderboards, and the access model that ties them together.
         </p>
       </div>
 
@@ -101,7 +101,7 @@ export default function AboutPortalPage() {
       <div className="mt-12 rounded-2xl bg-navy-50 border border-navy-100 p-6 sm:p-8 text-center">
         <h3 className="font-display font-bold text-navy-900 text-xl">Roles at a glance</h3>
         <p className="mt-2 text-slate-600 max-w-2xl mx-auto text-sm">
-          Admins manage everything. Department Heads own subjects and tests for their dept. Staff can mentor tutorward students. Students practice, attempt tests, and climb the leaderboard.
+          Admins manage everything. Department Heads can monitor and own subjects and tests for their dept. Staff can mentor tutorward students. Students practice, attempt tests, and climb the leaderboard.
         </p>
         <Link to="/login" className="inline-block mt-5">
           <Button size="lg" rightIcon={<ArrowRight className="h-4 w-4" />}>Go to sign in</Button>

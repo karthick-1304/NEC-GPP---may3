@@ -26,7 +26,7 @@ export const ParticipationDialog = ({ testId, onOpenChange }: Props) => {
   return (
     <Dialog open={testId != null} onOpenChange={onOpenChange} title="Test participation" size="md">
       <div className="flex items-center gap-2 mb-4 text-sm text-slate-500">
-        <Users className="h-4 w-4" /> Departments and academic years assigned to this test
+        <Users className="h-4 w-4" /> Academic years and departments assigned to this test
       </div>
       {isLoading && <div className="flex items-center gap-2 text-sm text-slate-500"><Spinner /> Loading…</div>}
       {!isLoading && Object.keys(groups).length === 0 && (

@@ -13,11 +13,11 @@ const transporter = nodemailer.createTransport({
 });
 
 export const sendEmail = async ({ to, subject, text, html, attachments = [] }) => {
-  if (process.env.NODE_ENV === 'development') {
-    console.log('DEV MODE: Email delivery suppressed natively', { to, subject }); 
-    logger.info('DEV MODE: Email delivery suppressed natively', { to, subject });
-    return { messageId: 'dev_mode_mock_id' };
-  }
+  // if (process.env.NODE_ENV === 'development') {
+  //   console.log('DEV MODE: Email delivery suppressed natively', { to, subject }); 
+  //   logger.info('DEV MODE: Email delivery suppressed natively', { to, subject });
+  //   return { messageId: 'dev_mode_mock_id' };
+  // }
 
   try {
     const info = await transporter.sendMail({

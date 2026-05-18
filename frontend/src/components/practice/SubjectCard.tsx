@@ -271,7 +271,7 @@ export const SubjectCard = ({ subject, isCollaborator, isSuperAccess }: Props) =
         title={subjectLocked ? 'Unlock subject?' : 'Lock subject?'}
         description={subjectLocked
           ? 'Collaborators will regain access to topics, sets, and practice.'
-          : 'All collaborators will be blocked from entering this subject. Only the owner and Admin can edit while locked.'}
+          : 'All collaborators will be blocked from entering this subject. Only the subject owner and Admin can edit while locked.'}
         confirmText={subjectLocked ? 'Unlock' : 'Lock'}
         destructive={!subjectLocked}
         loading={lockMut.isPending}
@@ -281,8 +281,8 @@ export const SubjectCard = ({ subject, isCollaborator, isSuperAccess }: Props) =
         open={confirm === 'deptLock'} onOpenChange={(o) => !o && setConfirm(null)}
         title={deptLock ? 'Show subject to your department?' : 'Hide subject from your department?'}
         description={deptLock
-          ? 'Students and staff in your department will see this subject again.'
-          : 'Students and staff in your department will no longer see this subject. Other collaborating departments are not affected.'}
+          ? 'Students and staff in your department will access this subject again.'
+          : 'Students and staff in your department will no longer access this subject. Other collaborating departments are not affected.'}
         confirmText={deptLock ? 'Show' : 'Hide'}
         destructive={!deptLock}
         loading={deptLockMut.isPending}
@@ -291,7 +291,7 @@ export const SubjectCard = ({ subject, isCollaborator, isSuperAccess }: Props) =
       <ConfirmDialog
         open={confirm === 'leave'} onOpenChange={(o) => !o && setConfirm(null)}
         title="Leave this subject?"
-        description="Your department will no longer collaborate on this subject. You can request to rejoin later."
+        description="Your department will no longer collaborate on this subject. However you can request to rejoin later."
         confirmText="Leave"
         destructive
         loading={leaveMut.isPending}

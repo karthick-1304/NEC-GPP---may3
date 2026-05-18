@@ -135,7 +135,7 @@ export const CreateSubjectDialog = ({ open, onOpenChange }: Props) => {
                  className="h-4 w-4 rounded border-slate-300 text-navy-700 focus:ring-amber-400" />
           <label htmlFor="notify" className="text-sm text-slate-700 flex items-center gap-1.5">
             <Users className="h-3.5 w-3.5 text-slate-400" />
-            Email all department heads about this new subject
+            Email notify all non-collaborating department heads about this creation of new subject
           </label>
         </div>
 

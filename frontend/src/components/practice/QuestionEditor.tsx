@@ -158,7 +158,7 @@ export const QuestionEditor = forwardRef<HTMLDivElement, Props>(
             <p className="text-xs text-slate-500 mt-1.5">
               {question.question_type === 'MCQ' && 'Multiple Choice — exactly one correct option (a/b/c/d).'}
               {question.question_type === 'MSQ' && 'Multiple Select — one or more correct options.'}
-              {question.question_type === 'NAT' && 'Numerical Answer Type — enter a numeric value. Up to 4 decimals.'}
+              {question.question_type === 'NAT' && 'Numerical Answer Type — answer must be a numeric value. Up to 4 decimals.'}
             </p>
           </div>
 
