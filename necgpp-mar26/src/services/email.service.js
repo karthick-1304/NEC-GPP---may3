@@ -471,7 +471,6 @@ export const sendTestDeletedMail = async (testName, deptIds) => {
 };
 
 export const sendTestReportMail = async (test, results, toList, attachments) => {
-  if (await suppressed(`Test report: ${test?.test_name}`)) return;
   const html = templates.genericNotificationTemplate(
     'Final Test Report',
     `The examination <strong>${test.test_name}</strong> has successfully completed. Detailed statistics and student results are attached.`,
