@@ -7,6 +7,7 @@ import { Dialog, ConfirmDialog } from '@/components/ui/Dialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { InfoNote } from '@/components/ui/InfoNote';
 import { subjectsApi } from '@/lib/api/subjects';
 import { parseApiError } from '@/lib/api/client';
 import type { Subject } from '@/types/api';
@@ -50,6 +51,10 @@ export const ManageCollaboratorsDialog = ({ open, onOpenChange, subject }: Props
         {isLoading && <div className="flex items-center gap-2 text-sm text-slate-500"><Spinner /> Loading…</div>}
 
         {!isLoading && (
+          <>
+          <InfoNote tone="mail" className="mb-4">
+            Adding or removing a collaborator notifies all current collaborators.
+          </InfoNote>
           <div className="grid md:grid-cols-2 gap-5">
             {/* Current */}
             <section>
@@ -117,6 +122,7 @@ export const ManageCollaboratorsDialog = ({ open, onOpenChange, subject }: Props
               )}
             </section>
           </div>
+          </>
         )}
       </Dialog>
 

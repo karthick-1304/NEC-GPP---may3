@@ -13,6 +13,7 @@ import { Field } from '@/components/ui/Field';
 import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
 import { Badge } from '@/components/ui/Badge';
+import { InfoNote } from '@/components/ui/InfoNote';
 
 import { setsApi } from '@/lib/api/sets';
 import { topicsApi } from '@/lib/api/topics';
@@ -192,6 +193,12 @@ export default function SetEditorPage({ mode }: Props) {
           </Button>
         </div>
       </div>
+
+      <InfoNote tone="mail" className="mb-5">
+        {mode === 'create'
+          ? 'New set creation notified to all collaborators of this subject.'
+          : 'Editing of set notified to all collaborators of this subject.'}
+      </InfoNote>
 
       {/* ─── Set-level config card ───────────────────────────────── */}
       <div className="card p-5 sm:p-6 mb-5">

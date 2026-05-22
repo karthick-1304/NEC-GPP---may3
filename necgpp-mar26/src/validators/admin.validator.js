@@ -1,11 +1,21 @@
 // src/validators/admin.validator.js
 import Joi from 'joi';
 
+// `batch_year` is stored as a string but must represent a positive integer
+// (the start year of the batch, e.g. "2022"). This regex rejects "0",
+// negatives, leading-zero values, and any non-numeric input.
+const positiveIntStringPattern = /^[1-9]\d*$/;
+const batchYearMessage = 'Batch year must be a positive number greater than 0.';
+
 // ─── List users query ─────────────────────────────────────────────────────────
 export const listUsersQuerySchema = Joi.object({
   role:       Joi.string().valid('Admin', 'Dept Head', 'Staff', 'Student').default('Student'),
   dept_code:  Joi.string().max(20).allow('', null),
-  batch_year: Joi.string().max(10).allow('', null),
+  // Query filter — accepts empty (= "all batches"). When set, must be a
+  // positive integer string so the SQL `WHERE s.batch_year = ?` predicate
+  // never matches garbage.
+  batch_year: Joi.string().max(10).pattern(positiveIntStringPattern).allow('', null)
+    .messages({ 'string.pattern.base': batchYearMessage }),
   search:     Joi.string().max(100).trim().allow('', null),
   page:       Joi.number().integer().min(1).default(1),
   limit:      Joi.number().integer().min(1).max(100).default(20),
@@ -17,7 +27,8 @@ export const createSingleStudentSchema = Joi.object({
   email:        Joi.string().email().max(50).lowercase().trim().required(),
   phone_number: Joi.string().min(10).max(15).pattern(/^\d+$/).allow('', null),
   dept_code:    Joi.string().max(20).trim().required(),
-  batch_year:   Joi.string().max(10).required(),
+  batch_year:   Joi.string().max(10).pattern(positiveIntStringPattern).required()
+    .messages({ 'string.pattern.base': batchYearMessage }),
   reg_num:      Joi.string().alphanum().min(1).max(50).required(),
 });
 
@@ -49,7 +60,8 @@ export const editStudentSchema = Joi.object({
   full_name:    Joi.string().min(2).max(50).trim(),
   email:        Joi.string().email().max(50).lowercase().trim(),
   phone_number: Joi.string().min(10).max(15).pattern(/^\d+$/).allow('', null),
-  batch_year:   Joi.string().max(10),
+  batch_year:   Joi.string().max(10).pattern(positiveIntStringPattern)
+    .messages({ 'string.pattern.base': batchYearMessage }),
   dept_code:    Joi.string().max(20).trim(),
   reg_num:      Joi.string().alphanum().min(1).max(50),
   remove_tutor: Joi.boolean(),
@@ -70,6 +82,7 @@ export const deleteByEmailSchema = Joi.object({
 
 // ─── Bulk delete students ─────────────────────────────────────────────────────
 export const bulkDeleteStudentsSchema = Joi.object({
-  batch_year: Joi.string().max(10).required(),
+  batch_year: Joi.string().max(10).pattern(positiveIntStringPattern).required()
+    .messages({ 'string.pattern.base': batchYearMessage }),
   dept_code:  Joi.string().max(20).trim().required(),
 });

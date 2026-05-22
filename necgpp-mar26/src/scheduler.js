@@ -97,8 +97,23 @@ async function processEndedTest(test) {
     [test.test_id]
   );
 
-  // 4. Build Excel + email — even if no attempts (send empty report)
-  const wb       = buildTestResultWorkbook(test, results, assignments);
+  // 4. Build Excel + email — even if no attempts (send empty report).
+  // Fetch the question set NOW (before the cleanup transaction below wipes
+  // it). Recipients want the full picture: who attempted what, AND what
+  // questions were on the test.
+  const [questions] = await pool.query(
+    `SELECT q.question_id, q.question_type, q.question_text,
+            q.option_a, q.option_b, q.option_c, q.option_d,
+            q.correct_answer, q.marks,
+            q.question_image_url
+     FROM test_questions tq
+     JOIN questions q ON tq.question_id = q.question_id
+     WHERE tq.test_id = ?
+     ORDER BY q.question_id`,
+    [test.test_id]
+  );
+
+  const wb       = buildTestResultWorkbook(test, results, assignments, questions);
   const buf      = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
   const filename = `${test.test_name.replace(/\s+/g, '_')}_results_${Date.now()}.xlsx`;
 
@@ -150,7 +165,13 @@ async function processEndedTest(test) {
 }
 
 // ─── Excel builder ────────────────────────────────────────────────────────────
-function buildTestResultWorkbook(test, results, assignments) {
+//
+// Three sheets:
+//   1. "Test Info"   — metadata + participation (Dept × Batch)
+//   2. "Results"     — per-student score breakdown
+//   3. "Questions"   — every question on the test with its correct answer,
+//                       marks, and any image URL (added per item #24)
+function buildTestResultWorkbook(test, results, assignments, questions = []) {
   const wb = XLSX.utils.book_new();
 
   const infoRows = [
@@ -172,7 +193,7 @@ function buildTestResultWorkbook(test, results, assignments) {
     'Reg Num', 'Student Name', 'Email', 'Dept', 'Batch Year',
     'Score', 'Total Marks', 'Correct', 'Wrong', 'Attempts', 'Status',
   ];
-  const dataRows = results.map((r, i) => [
+  const dataRows = results.map((r) => [
     r.reg_num, r.full_name, r.email, r.dept_code, r.batch_year,
     Number(r.total_score), test.total_marks,
     r.correct_count, r.wrong_count, r.attempt_count, r.status,
@@ -183,6 +204,34 @@ function buildTestResultWorkbook(test, results, assignments) {
     { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 12 },
   ];
   XLSX.utils.book_append_sheet(wb, sheet2, 'Results');
+
+  // ── Questions sheet — full content of the test ──────────────────────────
+  // Same column order as the bulk-upload sample so recipients can copy this
+  // sheet as a starting point for re-running similar tests.
+  const qHeaders = [
+    '#', 'Type', 'Question',
+    'Option A', 'Option B', 'Option C', 'Option D',
+    'Correct Answer', 'Marks', 'Image URL',
+  ];
+  const qRows = questions.map((q, i) => [
+    i + 1,
+    q.question_type,
+    q.question_text ?? '',
+    q.option_a ?? '',
+    q.option_b ?? '',
+    q.option_c ?? '',
+    q.option_d ?? '',
+    q.correct_answer ?? '',
+    q.marks ?? '',
+    q.question_image_url ?? '',
+  ]);
+  const sheet3 = XLSX.utils.aoa_to_sheet([qHeaders, ...qRows]);
+  sheet3['!cols'] = [
+    { wch: 4 }, { wch: 6 }, { wch: 50 },
+    { wch: 24 }, { wch: 24 }, { wch: 24 }, { wch: 24 },
+    { wch: 18 }, { wch: 6 }, { wch: 40 },
+  ];
+  XLSX.utils.book_append_sheet(wb, sheet3, 'Questions');
 
   return wb;
 }

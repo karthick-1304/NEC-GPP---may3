@@ -60,6 +60,20 @@ const getCollaboratorEmails = async (subjectId) => {
 };
 
 // ─── Helper: send to array of recipients, skipping empty ─────────────────────
+//
+// This is the universal safety net for every fan-out email in this file.
+// Every caller funnels through here, which means:
+//
+//   • Empty arrays are a no-op (returns early — no sendEmail call, no error).
+//   • Nulls / undefineds / empty strings inside the array are filtered out.
+//   • Duplicates collapse via Set, so a collaborator who's also an Admin
+//     gets one mail, not two.
+//
+// Therefore upstream callers don't need to defensively check for empty lists
+// before calling bulkSend — feeding it `[]` or `[null, undefined, '']` is
+// safe. Single-recipient transactional mails (welcome, OTP, password-changed)
+// bypass this and call sendEmail directly because they have exactly one
+// guaranteed recipient.
 const bulkSend = async ({ to, subject, html, attachments = [] }) => {
   let recipients = [];
   if (Array.isArray(to)) recipients = to;
@@ -244,7 +258,12 @@ export const sendDeptViewLockMail = async (deptId, subjectName, locked) => {
     'Visibility Changed',
     `The subject <strong>${subjectName}</strong> is now <strong>${action.toLowerCase()}</strong> for your department in effect of your Department Head's settings.`
   );
-  await bulkSend({ to: [...memberEmails,...headEmail], subject: `Visibility Change: ${subjectName}`, html });
+  // `headEmail` is `string | null` — pushing it (not spreading) avoids two
+  // bugs:
+  //   1) spreading a null would throw at runtime
+  //   2) spreading a string would expand into individual characters
+  // `bulkSend` filters the null out and dedupes if the head is also a member.
+  await bulkSend({ to: [...memberEmails, headEmail], subject: `Visibility Change: ${subjectName}`, html });
 };
 
 export const sendCollaboratorAddedMail = async (subjectId, subjectName, addedDeptName) => {

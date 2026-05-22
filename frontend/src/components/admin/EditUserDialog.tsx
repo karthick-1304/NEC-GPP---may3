@@ -23,7 +23,15 @@ const studentSchema = z.object({
   full_name: z.string().trim().min(2).max(50).optional(),
   email:     z.string().email().max(50).optional(),
   phone_number: z.string().regex(/^\d{10,15}$/).optional().or(z.literal('')),
-  batch_year: z.string().min(1).max(10).optional(),
+  batch_year: z.string()
+    .min(1)
+    .max(10)
+    // Positive-integer string check — mirrors the create-side rule and
+    // backend Joi regex. Optional() means an unchanged batch_year (empty
+    // string sent as the form default) passes through; only when the user
+    // typed something do we enforce the format.
+    .regex(/^[1-9]\d*$/, 'Batch year must be a positive number greater than 0')
+    .optional(),
   dept_code:  z.string().min(2, 'Pick any one dept').max(20).optional(),
   reg_num:    z.string().min(1).max(50).regex(/^[a-zA-Z0-9]+$/).optional(),
   remove_tutor: z.boolean().optional(),

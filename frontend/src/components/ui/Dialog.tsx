@@ -8,6 +8,14 @@ interface ConfirmProps {
   onOpenChange: (o: boolean) => void;
   title: string;
   description?: React.ReactNode;
+  /**
+   * Optional content rendered between description and buttons — designed
+   * for an <InfoNote/> explaining side effects (e.g. "this notifies all
+   * collaborators"). Kept as a separate slot from `description` because
+   * Radix renders the description inside a <p> and nesting block-level
+   * elements there would produce invalid HTML.
+   */
+  info?: React.ReactNode;
   confirmText?: string;
   cancelText?: string;
   destructive?: boolean;
@@ -16,7 +24,7 @@ interface ConfirmProps {
 }
 
 export const ConfirmDialog = ({
-  open, onOpenChange, title, description,
+  open, onOpenChange, title, description, info,
   confirmText = 'Confirm', cancelText = 'Cancel',
   destructive, loading, onConfirm,
 }: ConfirmProps) => {
@@ -37,6 +45,7 @@ export const ConfirmDialog = ({
             {description}
           </RDialog.Description>
         )}
+        {info && <div className="mt-4">{info}</div>}
         <div className="mt-6 flex justify-end gap-2">
           <button
             type="button"

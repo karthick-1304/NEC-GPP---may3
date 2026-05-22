@@ -61,6 +61,22 @@ export const createTestSchema = Joi.object({
 });
 
 // ─── Update test settings ─────────────────────────────────────────────────────
+//
+// Edit-rule matrix (mirrors frontend gating):
+//
+//                            | Not started | Started
+//   test_name                 | edit        | edit
+//   negative_marking          | edit        | edit
+//   start_time                | edit        | reject (controller)
+//   end_time                  | edit        | reject (controller)
+//   duration_minutes          | edit        | reject (controller)
+//   assignments (add)         | edit        | edit
+//   remove_assignments        | edit        | reject (controller)
+//   questions (make-q mode)   | edit        | reject (controller)
+//   questions (intelli-pick)  | reject      | reject (always)
+//
+// The schema accepts the fields; the *controller* enforces the started-state
+// rejections so we can return precise error messages per field.
 export const updateTestSchema = Joi.object({
   test_name:        Joi.string().min(2).max(50).trim(),
   // Same future-only rule applies to updates: the controller only accepts
@@ -73,6 +89,15 @@ export const updateTestSchema = Joi.object({
   negative_marking: Joi.boolean(),
   // Assignments: add-only in controller (INSERT IGNORE). Pass at least 1 if provided.
   assignments: Joi.array().items(
+    Joi.object({
+      dept_id:       Joi.number().integer().positive().required(),
+      academic_year: Joi.string().max(10).required(),
+    })
+  ).min(1),
+  // Remove-assignments: list of (dept_id, academic_year) pairs to DELETE.
+  // Only honoured when the test hasn't started yet — controller rejects with
+  // a 400 if start_time has already passed.
+  remove_assignments: Joi.array().items(
     Joi.object({
       dept_id:       Joi.number().integer().positive().required(),
       academic_year: Joi.string().max(10).required(),

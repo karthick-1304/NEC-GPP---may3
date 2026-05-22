@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/Dialog';
+import { InfoNote } from '@/components/ui/InfoNote';
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel,
@@ -272,6 +273,7 @@ export const SubjectCard = ({ subject, isCollaborator, isSuperAccess }: Props) =
         description={subjectLocked
           ? 'Collaborators will regain access to topics, sets, and practice.'
           : 'All collaborators will be blocked from entering this subject. Only the subject owner and Admin can edit while locked.'}
+        info={<InfoNote tone="mail">Lock/unlock notified to all collaborators.</InfoNote>}
         confirmText={subjectLocked ? 'Unlock' : 'Lock'}
         destructive={!subjectLocked}
         loading={lockMut.isPending}
@@ -283,6 +285,7 @@ export const SubjectCard = ({ subject, isCollaborator, isSuperAccess }: Props) =
         description={deptLock
           ? 'Students and staff in your department will access this subject again.'
           : 'Students and staff in your department will no longer access this subject. Other collaborating departments are not affected.'}
+        info={<InfoNote tone="mail">Dept access change notified to all staff & students in your dept.</InfoNote>}
         confirmText={deptLock ? 'Show' : 'Hide'}
         destructive={!deptLock}
         loading={deptLockMut.isPending}
@@ -292,6 +295,7 @@ export const SubjectCard = ({ subject, isCollaborator, isSuperAccess }: Props) =
         open={confirm === 'leave'} onOpenChange={(o) => !o && setConfirm(null)}
         title="Leave this subject?"
         description="Your department will no longer collaborate on this subject. However you can request to rejoin later."
+        info={<InfoNote tone="mail">Leaving notifies all current collaborators.</InfoNote>}
         confirmText="Leave"
         destructive
         loading={leaveMut.isPending}

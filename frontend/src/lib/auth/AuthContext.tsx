@@ -26,18 +26,41 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const queryClient = useQueryClient();
 
   // ─── Bootstrap: try refresh on mount (cookie may still be valid) ──────
+  //
+  // We cache the "no session" outcome in sessionStorage so anonymous visitors
+  // wandering across public pages (Home → About → Login) don't fire a fresh
+  // /auth/refresh on every navigation. The cache is cleared on login (so the
+  // next bootstrap reads the new session) and is implicitly cleared when the
+  // tab closes (sessionStorage lifetime).
+  //
+  // Without this, dev-mode hot reloads and HMR re-mounts produce a stream of
+  // 401s in the server log even though the user simply isn't signed in.
   useEffect(() => {
     if (bootstrapped.current) return;
     bootstrapped.current = true;
+
+    // Fast path: if a previous mount in this tab already determined there's
+    // no session, don't hit the network again.
+    if (typeof window !== 'undefined' && sessionStorage.getItem('noSession') === '1') {
+      tokenStore.set(null);
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
     (async () => {
       try {
         const r = await authApi.refresh();
         tokenStore.set(r.accessToken);
         const me = await authApi.me();
         setUser(me);
+        sessionStorage.removeItem('noSession'); // we ARE signed in
       } catch {
         tokenStore.set(null);
         setUser(null);
+        // Remember the negative result so subsequent mounts in this tab skip
+        // the network round-trip. Cleared on login and on tab close.
+        try { sessionStorage.setItem('noSession', '1'); } catch { /* private mode */ }
       } finally {
         setLoading(false);
       }
@@ -54,6 +77,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // prevents /me refreshes from overwriting it with the current session's
     // freshly-set timestamp.
     sessionStorage.setItem('previousLoginAt', r.user.last_login ?? '');
+    // Successful login invalidates the cached "no session" flag — the next
+    // page mount must hit /auth/refresh fresh to pick up the new session.
+    sessionStorage.removeItem('noSession');
     setUser(r.user);
     return r.user;
   }, []);
@@ -63,6 +89,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     tokenStore.set(null);
     setUser(null);
     sessionStorage.removeItem('previousLoginAt');
+    sessionStorage.removeItem('noSession'); // let the post-logout reload re-check
     // Crucial: drop every cached query so the next user doesn't see the previous
     // session's data on the same browser before refetches land.
     queryClient.clear();

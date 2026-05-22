@@ -67,6 +67,11 @@ export default function TestEditorPage({ mode }: Props) {
   const [intelli, setIntelli] = useState<IntelliState>({ subject_id: null, level: '1', topicCounts: new Map() });
   const [assignments, setAssignments] = useState<AssignmentEntry[]>([]);
   const [lockedAssignments, setLockedAssignments] = useState<AssignmentEntry[]>([]);
+  // Locked entries the user unchecked in the picker. Sent as
+  // `remove_assignments` on save (edit mode, not-started). The backend will
+  // DELETE them; the frontend already moved them OUT of lockedAssignments so
+  // they render as unchecked immediately.
+  const [removedAssignments, setRemovedAssignments] = useState<AssignmentEntry[]>([]);
 
   // ─── RHF for the simple inputs ────────────────────────────────────
   const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<FormValues>({
@@ -101,6 +106,7 @@ export default function TestEditorPage({ mode }: Props) {
     });
     setLockedAssignments(existing.assignments.map(a => ({ ...a, locked: true })));
     setAssignments([]);
+    setRemovedAssignments([]); // fresh edit session — no pending removals
     setIntelliMode(existing.test.is_intelli_pick === 1);
 
     if (existing.test.is_intelli_pick !== 1 && existing.questions.length) {
@@ -221,16 +227,43 @@ export default function TestEditorPage({ mode }: Props) {
       createMut.mutate(payload);
     } else {
       // EDIT
+      //
+      // Only send fields the user is allowed to change for this test's current
+      // state. The backend independently re-checks `startedAlready` and rejects
+      // any locked field — this just keeps the request payload honest so we
+      // don't send fields we know will bounce.
       const body: Parameters<typeof testsApi.update>[1] = {
         test_name: form.test_name.trim(),
-        end_time: endISO,
-        duration_minutes: form.duration_minutes,
         negative_marking: form.negative_marking,
       };
-      if (canEditStartTime) body.start_time = startISO;
+
+      // Schedule + duration only when the test hasn't started yet.
+      if (!startedAlready) {
+        body.start_time = startISO;
+        body.end_time   = endISO;
+        body.duration_minutes = form.duration_minutes;
+      }
+
+      // Additions — always allowed (both started and not-started states).
       if (assignments.length) {
         body.assignments = assignments.map(a => ({ dept_id: a.dept_id, academic_year: a.academic_year }));
       }
+
+      // Removals — only when not started. The picker emits onRemoveLocked
+      // for each locked entry the user unchecks, and we track those in
+      // `removedAssignments`. We also filter out anything the user has
+      // since re-added (back in `assignments`) so we don't tell the backend
+      // to add and remove the same pair in the same request.
+      if (!startedAlready && removedAssignments.length) {
+        const reAddedKeys = new Set(assignments.map(a => `${a.dept_id}|${a.academic_year}`));
+        const toRemove = removedAssignments.filter(
+          (r) => !reAddedKeys.has(`${r.dept_id}|${r.academic_year}`),
+        );
+        if (toRemove.length) {
+          body.remove_assignments = toRemove.map(a => ({ dept_id: a.dept_id, academic_year: a.academic_year }));
+        }
+      }
+
       if (canEditQuestions) {
         const drafts = editorRef.current?.validateAndCollect();
         if (drafts) body.questions = toApiQuestions(drafts);
@@ -313,7 +346,7 @@ export default function TestEditorPage({ mode }: Props) {
         </div>
         <div className="grid sm:grid-cols-3 gap-5">
           <Field label="Start time" required error={errors.start_time?.message}
-                 hint={!canEditStartTime ? 'Locked — test has started.' : 'In your local timezone.'}>
+                 hint={!canEditStartTime ? 'Locked (Can\'t Edit once test has started)' : 'In your local timezone.'}>
             <input
               type="datetime-local"
               disabled={!canEditStartTime}
@@ -321,17 +354,41 @@ export default function TestEditorPage({ mode }: Props) {
               className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40 disabled:bg-slate-50 disabled:text-slate-500"
             />
           </Field>
-          <Field label="End time" required error={errors.end_time?.message}>
+          <Field label="End time" required error={errors.end_time?.message}
+                 hint={startedAlready ? 'Locked (Can\'t Edit once test has started)' : undefined}>
             <input
               type="datetime-local"
+              disabled={startedAlready}
               {...register('end_time')}
-              className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+              className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40 disabled:bg-slate-50 disabled:text-slate-500"
             />
           </Field>
           <Field label="Duration (minutes)" required error={errors.duration_minutes?.message}
-                 hint="5mins to 500mins — per-attempt countdown.">
+                 hint={startedAlready ? 'Locked (Can\'t Edit once test has started)' : '5mins to 500mins — per-attempt countdown.'}>
             <Input
-              type="number" min={5} max={500}
+              // step=1 makes the integer intent explicit — without it some
+              // browsers default to step=any and let fractional values slip
+              // through, which then surprise the user when zod rounds.
+              type="number" min={5} max={500} step={1}
+              disabled={startedAlready}
+              // ────────────────────────────────────────────────────────────
+              // <input type="number"> has two notorious footguns that silently
+              // decrement the value the user just typed:
+              //   1. Scroll wheel — rotating the wheel while the input is
+              //      focused changes the value (e.g. typing 300, scrolling
+              //      the page, getting 299 or worse).
+              //   2. ↑/↓/PgUp/PgDn keys — pressing ↓ once on a focused number
+              //      input decrements by step (typing "300" then hitting ↓
+              //      to move toward the Save button → 299).
+              // We blur on wheel and prevent arrow/PgDn default to make the
+              // typed value the only source of truth.
+              // ────────────────────────────────────────────────────────────
+              onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()}
+              onKeyDown={(e) => {
+                if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown'].includes(e.key)) {
+                  e.preventDefault();
+                }
+              }}
               leftIcon={<Clock className="h-4 w-4" />}
               invalid={!!errors.duration_minutes}
               {...register('duration_minutes', { valueAsNumber: true })}
@@ -343,34 +400,57 @@ export default function TestEditorPage({ mode }: Props) {
       {/* ─── Assignments ────────────────────────────────────────── */}
       <SectionCard title="Participation" icon={<Calendar className="h-4 w-4 text-amber-500" />}>
         <p className="text-xs text-slate-500 mb-3">
-          {mode === 'edit' && lockedAssignments.length > 0
-            ? 'Existing participation cannot be removed — only new (dept × batch) pairs can be added.'
-            : 'Pick which (batch x department) pairs are assigned this test. At least one pair is required.'}
+          {mode === 'edit' && startedAlready
+            ? 'Test has started — existing participation cannot be removed. You can still add new (dept × batch) pairs.'
+            : mode === 'edit' && lockedAssignments.length > 0
+              ? 'Existing participation can be removed (uncheck) or added. Removals take effect on save.'
+              : 'Pick which (batch x department) pairs are assigned this test. At least one pair is required.'}
         </p>
         <AssignmentsPicker
           value={assignments}
           onChange={setAssignments}
           lockedEntries={lockedAssignments}
           startedAlready={startedAlready}
+          // Picker emits this when the user unchecks a locked entry on a
+          // not-started test. We move that entry OUT of lockedAssignments
+          // (so it renders as unchecked) and INTO removedAssignments (which
+          // becomes the `remove_assignments` payload on save).
+          onRemoveLocked={(entry) => {
+            setLockedAssignments(prev => prev.filter(
+              a => !(a.dept_id === entry.dept_id && a.academic_year === entry.academic_year),
+            ));
+            setRemovedAssignments(prev => {
+              // Dedupe: if the user does some toggle-uncheck-toggle dance,
+              // we still only need one removal entry per pair.
+              if (prev.some(p => p.dept_id === entry.dept_id && p.academic_year === entry.academic_year)) return prev;
+              return [...prev, entry];
+            });
+          }}
         />
       </SectionCard>
 
       {/* ─── Mode + Content ─────────────────────────────────────── */}
       <SectionCard title="Question source" icon={<Wand2 className="h-4 w-4 text-amber-500" />}>
         {isIntelliExisting ? (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex gap-2 text-amber-800 text-sm">
-            <Lock className="h-4 w-4 shrink-0 mt-0.5" />
-            <div>
-              <strong>Intelli-Pick test.</strong> Questions are auto-picked at creation and cannot be edited. Schedule, negative marking, and added participation are still editable.
+          <>
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex gap-2 text-amber-800 text-sm mb-5">
+              <Lock className="h-4 w-4 shrink-0 mt-0.5" />
+              <div>
+                <strong>Intelli-Pick test.</strong> Questions are auto-picked at creation and cannot be edited. Schedule, negative marking, and added participation are still editable. The chosen questions are shown below for reference.
+              </div>
             </div>
-          </div>
+            <ReadOnlyQuestionsList questions={existing?.questions ?? []} />
+          </>
         ) : !canEditQuestions ? (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex gap-2 text-amber-800 text-sm">
-            <Lock className="h-4 w-4 shrink-0 mt-0.5" />
-            <div>
-              The test has already started — questions cannot be changed. Schedule, end time, and additional participation are still editable.
+          <>
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex gap-2 text-amber-800 text-sm mb-5">
+              <Lock className="h-4 w-4 shrink-0 mt-0.5" />
+              <div>
+                The test has already started — questions cannot be changed. Schedule, end time, and additional participation are still editable. The current questions are shown below for reference.
+              </div>
             </div>
-          </div>
+            <ReadOnlyQuestionsList questions={existing?.questions ?? []} />
+          </>
         ) : (
           <>
             {mode === 'create' && (
@@ -451,5 +531,120 @@ function SectionCard({ title, icon, children }: { title: string; icon: React.Rea
       </header>
       {children}
     </section>
+  );
+}
+
+// ─── ReadOnlyQuestionsList ────────────────────────────────────────────────
+// Displays the test's questions without any editing affordances. Rendered
+// when the test has started (locked) or is Intelli-Pick. Shows everything
+// the test creator might want to verify: text, options with the correct
+// answer marked, marks, and any attached image.
+function ReadOnlyQuestionsList({ questions }: {
+  questions: Array<{
+    question_id: number;
+    question_type: 'MCQ' | 'MSQ' | 'NAT';
+    question_text: string;
+    option_a: string | null;
+    option_b: string | null;
+    option_c: string | null;
+    option_d: string | null;
+    correct_answer: string;
+    marks: number;
+    question_image_url: string | null;
+    question_image_thumb_url: string | null;
+  }>;
+}) {
+  if (!questions.length) {
+    return (
+      <p className="text-sm text-slate-500 italic">No questions to display.</p>
+    );
+  }
+
+  // For MCQ/MSQ, correct_answer is a string like "A" or "A,C". Normalise to
+  // a Set of single-letter keys so we can render a green ✓ on the right options.
+  const correctSet = (q: { correct_answer: string }) =>
+    new Set(q.correct_answer.split(',').map(s => s.trim().toUpperCase()));
+
+  return (
+    <ol className="space-y-3">
+      {questions.map((q, i) => {
+        const correct = correctSet(q);
+        const opts = [
+          { key: 'A', text: q.option_a },
+          { key: 'B', text: q.option_b },
+          { key: 'C', text: q.option_c },
+          { key: 'D', text: q.option_d },
+        ].filter(o => o.text != null);
+
+        return (
+          <li
+            key={q.question_id}
+            className="rounded-xl border border-slate-200 bg-slate-50/50 p-4"
+          >
+            <div className="flex items-start gap-3">
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-navy-100 text-navy-700 text-xs font-bold shrink-0">
+                {i + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-wider">
+                    {q.question_type}
+                  </span>
+                  <span className="text-[0.7rem] text-slate-500">
+                    {q.marks} mark{q.marks === 1 ? '' : 's'}
+                  </span>
+                </div>
+                <p className="text-sm text-navy-900 whitespace-pre-wrap leading-relaxed">
+                  {q.question_text}
+                </p>
+
+                {q.question_image_url && (
+                  <img
+                    src={q.question_image_thumb_url || q.question_image_url}
+                    alt="Question reference"
+                    loading="lazy"
+                    className="mt-2 max-h-48 rounded-lg border border-slate-200"
+                  />
+                )}
+
+                {q.question_type === 'NAT' ? (
+                  <div className="mt-3 text-xs text-slate-600">
+                    Correct answer:{' '}
+                    <span className="font-mono font-bold text-emerald-700">
+                      {q.correct_answer || '—'}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="mt-3 grid sm:grid-cols-2 gap-2">
+                    {opts.map(o => {
+                      const isCorrect = correct.has(o.key);
+                      return (
+                        <div
+                          key={o.key}
+                          className={cn(
+                            'flex items-start gap-2 rounded-lg border px-3 py-2 text-xs',
+                            isCorrect
+                              ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                              : 'bg-white border-slate-200 text-slate-700',
+                          )}
+                        >
+                          <span className={cn(
+                            'grid h-5 w-5 place-items-center rounded-full text-[0.65rem] font-bold shrink-0',
+                            isCorrect ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-600',
+                          )}>
+                            {o.key}
+                          </span>
+                          <span className="whitespace-pre-wrap leading-relaxed">{o.text}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </li>
+        );
+      })}
+    </ol>
   );
 }

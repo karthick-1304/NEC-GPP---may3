@@ -223,8 +223,26 @@ export const bulkCreateStudents = catchAsync(async (req, res) => {
     const batch_year   = String(row['batch_year']    || row['Batch Year']   || '').trim();
     const reg_num      = String(row['reg_num']       || row['Reg Num']      || '').trim();
 
+    
     if (!full_name || !email || !dept_code || !batch_year || !reg_num) {
+      console.log(
+        i+2,
+        full_name,
+        email,
+        phone_number,
+        dept_code,
+        batch_year,
+        reg_num
+      )
       errors.push({ row: i + 2, reason: 'Missing required fields (Name, Email, Dept, Batch, or Reg Num).' });
+      continue;
+    }
+
+    // Batch year must be a positive integer string (matches the rule applied
+    // by the single-create validator and the frontend zod schema). Reject
+    // "0", "-5", "abc", "2024.5", etc. early before any DB writes.
+    if (!/^[1-9]\d*$/.test(batch_year)) {
+      errors.push({ row: i + 2, reason: `Batch year '${batch_year}' must be a positive number greater than 0.` });
       continue;
     }
 

@@ -10,6 +10,7 @@ import { Dialog } from '@/components/ui/Dialog';
 import { Field } from '@/components/ui/Field';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { InfoNote } from '@/components/ui/InfoNote';
 import { topicsApi } from '@/lib/api/topics';
 import { parseApiError } from '@/lib/api/client';
 
@@ -55,6 +56,9 @@ export const CreateTopicDialog = ({ subjectId, open, onOpenChange }: Props) => {
         </div>
       </div>
       <form onSubmit={handleSubmit(d => m.mutate(d.topic_name.trim()))} noValidate className="space-y-4">
+        <InfoNote tone="mail">
+          Creation of new topic is notified to all collaborators of this subject.
+        </InfoNote>
         <Field label="Topic name" required error={errors.topic_name?.message}>
           <Input leftIcon={<Layers className="h-4 w-4" />} placeholder="e.g. Trees and Graphs"
                  invalid={!!errors.topic_name} {...register('topic_name')} />

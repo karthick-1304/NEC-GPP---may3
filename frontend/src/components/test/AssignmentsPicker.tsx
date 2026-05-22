@@ -21,10 +21,16 @@ interface Props {
   /** Existing entries (in edit mode). They appear pre-checked + locked when test has started. */
   lockedEntries?: AssignmentEntry[];
   /**
+   * Fired when the user unchecks a locked entry on a NOT-yet-started test —
+   * the parent should drop the entry from `lockedEntries` and remember it in
+   * its own "to-be-deleted" list so it can send `remove_assignments` to the
+   * backend on save. Not invoked when `startedAlready` is true.
+   */
+  onRemoveLocked?: (entry: AssignmentEntry) => void;
+  /**
    * `true` when the test has already started — locked entries cannot be unchecked.
-   * `false` when the test hasn't started — even pre-existing entries can be unchecked
-   *   (we still mirror them as `value` entries so removing them in the picker does nothing
-   *   for the API; backend keeps existing rows on PATCH).
+   * `false` when the test hasn't started — locked entries CAN be unchecked,
+   * which triggers `onRemoveLocked` so the parent can build the removal list.
    */
   startedAlready?: boolean;
 }
@@ -38,7 +44,7 @@ interface Props {
  *   3. Bucket of all currently-selected (dept × year) pairs is shown grouped.
  */
 export const AssignmentsPicker = ({
-  value, onChange, lockedEntries = [], startedAlready = false,
+  value, onChange, lockedEntries = [], onRemoveLocked, startedAlready = false,
 }: Props) => {
   const { data: depts = [], isLoading: deptsLoading } = useQuery({
     queryKey: ['departments'], queryFn: commonApi.departments, staleTime: 5 * 60_000,
@@ -70,17 +76,23 @@ export const AssignmentsPicker = ({
   };
 
   const toggle = (deptId: number, year: string) => {
-    if (startedAlready && isLockedFor(deptId, year)) return; // can't remove on started test
+    const locked = isLockedFor(deptId, year);
+
+    if (locked) {
+      // Locked entries (existing on the backend) can only be removed when the
+      // test hasn't started. Tell the parent — it owns the lockedEntries list
+      // and the "pending removal" tracker that gets sent as `remove_assignments`
+      // on save.
+      if (startedAlready) return; // hard block
+      onRemoveLocked?.({ dept_id: deptId, academic_year: year });
+      return;
+    }
+
     const checked = isCheckedFor(deptId, year);
     if (checked) {
-      // Remove from value (and from "would-add" lockedEntries fallback)
-      // If it was a locked entry on a not-yet-started test, removing it does nothing for the API
-      // because the backend's update is INSERT IGNORE only — so the row stays. We still let the
-      // user uncheck visually; the parent decides whether to ignore.
+      // Plain new-addition unchecks remove from the parent's `value` array.
       onChange(value.filter(v => !(v.dept_id === deptId && v.academic_year === year)));
     } else {
-      // Add only if not already locked (locked => already present)
-      if (isLockedFor(deptId, year)) return;
       onChange([...value, { dept_id: deptId, academic_year: year }]);
     }
   };

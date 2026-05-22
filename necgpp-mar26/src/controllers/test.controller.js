@@ -337,11 +337,11 @@ const _intelliPickQuestions = async ({ subject_id, level, topics }) => {
 
 export const updateTest = catchAsync(async (req, res) => {
   const { testId } = req.params;
-  const { test_name, start_time, end_time, duration_minutes, negative_marking, assignments, questions } = req.body;
+  const { test_name, start_time, end_time, duration_minutes, negative_marking, assignments, remove_assignments, questions } = req.body;
   const { userId, role } = req.user;
 
   const tests = await executeQuery(
-    'SELECT test_id, created_by, is_intelli_pick FROM tests WHERE test_id = ?', [testId]
+    'SELECT test_id, created_by, is_intelli_pick, start_time, end_time, duration_minutes, negative_marking, test_name FROM tests WHERE test_id = ?', [testId]
   );
   if (!tests.length) throw new AppError('Test not found.', 404);
 
@@ -350,9 +350,36 @@ export const updateTest = catchAsync(async (req, res) => {
     throw new AppError('Only the test creator or Admin can edit this test.', 403);
   }
 
+  // Pre-compute once — every started-state check below uses this single
+  // source of truth so we can't get a half-locked, half-editable result
+  // from race-condition reads inside the transaction.
+  const startedAlready = new Date(test.start_time) <= new Date();
+
   // VALIDATION: questions from make questions mode can only be changed...Dont change the questions by intelli-pick.
   if (questions !== undefined && test.is_intelli_pick) {
     throw new AppError('Individual questions cannot be edited for an Intelli-Pick test. Only test metadata and assignments can be changed.', 400);
+  }
+
+  // ── Started-state field locks ─────────────────────────────────────────────
+  // Once a test starts, schedule/duration/question changes would surprise
+  // students mid-attempt. Reject those field-by-field with precise messages
+  // so the frontend can map them back to the right input.
+  if (startedAlready) {
+    if (start_time !== undefined) {
+      throw new AppError('Start time cannot be changed after the test has started.', 400);
+    }
+    if (end_time !== undefined) {
+      throw new AppError('End time cannot be changed after the test has started.', 400);
+    }
+    if (duration_minutes !== undefined) {
+      throw new AppError('Duration cannot be changed after the test has started.', 400);
+    }
+    if (remove_assignments !== undefined) {
+      throw new AppError('Existing participation cannot be removed after the test has started. You can still add new participation.', 400);
+    }
+    if (questions !== undefined) {
+      throw new AppError('Questions cannot be edited after the test has started.', 400);
+    }
   }
 
   await withTransaction(async (conn) => {
@@ -360,14 +387,7 @@ export const updateTest = catchAsync(async (req, res) => {
     const updates = [];
     const params = [];
     if (test_name !== undefined) { updates.push('test_name = ?'); params.push(test_name); }
-    if (start_time !== undefined) {
-      // Block start_time change once test has already started
-      const [cur] = await conn.execute('SELECT start_time FROM tests WHERE test_id = ?', [testId]);
-      if (new Date(cur[0].start_time) <= new Date()) {
-        throw new AppError('Start time cannot be changed after the test has started.', 400);
-      }
-      updates.push('start_time = ?'); params.push(start_time);
-    }
+    if (start_time !== undefined) { updates.push('start_time = ?'); params.push(start_time); }
     if (end_time !== undefined) { updates.push('end_time = ?'); params.push(end_time); }
     if (duration_minutes !== undefined) { updates.push('duration_minutes = ?'); params.push(duration_minutes); }
     if (negative_marking !== undefined) { updates.push('negative_marking = ?'); params.push(negative_marking ? 1 : 0); }
@@ -377,7 +397,7 @@ export const updateTest = catchAsync(async (req, res) => {
       await conn.execute(`UPDATE tests SET ${updates.join(', ')} WHERE test_id = ?`, params);
     }
 
-    // Assignments: only ADD new ones — never delete existing (test may be live)
+    // Assignments: add new ones. Existing rows are kept untouched via INSERT IGNORE.
     if (assignments !== undefined) {
       if (assignments.length) {
         const ph = assignments.map(() => '(?, ?, ?)').join(',');
@@ -388,13 +408,24 @@ export const updateTest = catchAsync(async (req, res) => {
       }
     }
 
-    if (questions !== undefined) {
-      // Block question edit once test has started — check BEFORE cleanup
-      const [testMeta] = await conn.execute('SELECT start_time FROM tests WHERE test_id = ?', [testId]);
-      if (new Date(testMeta[0].start_time) <= new Date()) {
-        throw new AppError('Questions cannot be edited after the test has started.', 400);
+    // Remove-assignments: deletes specific (dept × batch) rows. Only reachable
+    // when test hasn't started (guarded above). Empty-or-not: per-pair DELETE.
+    if (remove_assignments !== undefined && remove_assignments.length) {
+      // One DELETE per pair keeps the query plan simple and lets MySQL skip
+      // non-existent rows silently. For tests with many pairs this is still
+      // fast — `test_assignment` is indexed on (test_id, dept_id, academic_year).
+      for (const { dept_id, academic_year } of remove_assignments) {
+        await conn.execute(
+          'DELETE FROM test_assignment WHERE test_id = ? AND dept_id = ? AND academic_year = ?',
+          [testId, dept_id, academic_year],
+        );
       }
+    }
 
+    if (questions !== undefined) {
+      // Started-state guard already rejected this case above — we only get
+      // here when the test hasn't started yet. Safe to proceed directly to
+      // the cleanup/replace.
       // Cleanup old questions
       const [existingLinks] = await conn.execute(
         'SELECT question_id FROM test_questions WHERE test_id = ?', [testId]
@@ -456,17 +487,58 @@ export const updateTest = catchAsync(async (req, res) => {
   });
 
   // ── Send Notification Emails ──────────────────────────────────────────────
+  //
+  // Build a per-field "old → new" change list so recipients see *what*
+  // actually changed, not just a vague "schedule updated". Only fields whose
+  // value really moved produce a line — so saving the form with no edits
+  // sends no email at all.
+  const fmtDt = (v) => {
+    if (!v) return '—';
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return String(v);
+    // ISO-ish short form; recipients almost always live in IST so this is
+    // their local time anyway since dates are stored as the user's local
+    // wall-clock in DATETIME columns.
+    return d.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+  };
   const changes = [];
-  if (test_name !== undefined) changes.push('Test name updated');
-  if (start_time !== undefined || end_time !== undefined || duration_minutes !== undefined) {
-    changes.push('Schedule/Timing updated');
+
+  if (test_name !== undefined && test_name !== test.test_name) {
+    changes.push(`Test name: <strong>${test.test_name}</strong> → <strong>${test_name}</strong>`);
   }
-  if (negative_marking !== undefined) changes.push('Negative marking policy changed');
-  if (assignments !== undefined) changes.push('Assigned departments/academic years updated');
-  if (questions !== undefined) changes.push('Test questions updated');
+  if (start_time !== undefined) {
+    changes.push(`Start time: <strong>${fmtDt(test.start_time)}</strong> → <strong>${fmtDt(start_time)}</strong>`);
+  }
+  if (end_time !== undefined) {
+    changes.push(`End time: <strong>${fmtDt(test.end_time)}</strong> → <strong>${fmtDt(end_time)}</strong>`);
+  }
+  if (duration_minutes !== undefined && Number(duration_minutes) !== Number(test.duration_minutes)) {
+    changes.push(`Duration: <strong>${test.duration_minutes} min</strong> → <strong>${duration_minutes} min</strong>`);
+  }
+  if (negative_marking !== undefined) {
+    const oldVal = test.negative_marking === 1;
+    const newVal = !!negative_marking;
+    if (oldVal !== newVal) {
+      changes.push(`Negative marking: <strong>${oldVal ? 'enabled' : 'disabled'}</strong> → <strong>${newVal ? 'enabled' : 'disabled'}</strong>`);
+    }
+  }
+  if (assignments !== undefined && assignments.length) {
+    changes.push(`Added <strong>${assignments.length}</strong> participation pair${assignments.length === 1 ? '' : 's'}`);
+  }
+  if (remove_assignments !== undefined && remove_assignments.length) {
+    changes.push(`Removed <strong>${remove_assignments.length}</strong> participation pair${remove_assignments.length === 1 ? '' : 's'}`);
+  }
+  if (questions !== undefined) {
+    const newMarks = questions.reduce((s, q) => s + Number(q.marks), 0);
+    changes.push(`Test questions replaced (<strong>${questions.length}</strong> questions, <strong>${newMarks}</strong> marks)`);
+  }
 
   if (changes.length > 0) {
-    emailService.sendTestUpdatedMail({ test_id: testId, test_name: test_name || 'Updated Test' }, changes)
+    // Always pass the *current* test_name (post-update if it changed,
+    // otherwise the existing one) so the email subject is recognisable
+    // regardless of what fields were touched.
+    const currentName = test_name !== undefined ? test_name : test.test_name;
+    emailService.sendTestUpdatedMail({ test_id: testId, test_name: currentName }, changes)
       .catch(err => logger.error('Test updated notification failed', { err: err.message }));
   }
 
@@ -570,37 +642,79 @@ export const startAttempt = catchAsync(async (req, res) => {
   );
   if (!assignment.length) throw new AppError('You are not assigned to this test.', 403);
 
-  // ─── START / RESUME ATTEMPT (Race-condition safe) ──────────────────────────
+  // ─── START / RESUME ATTEMPT (Race-condition safe, AUTO_INCREMENT-friendly) ──
+  //
+  // Previous implementation used `INSERT ... ON DUPLICATE KEY UPDATE`. That
+  // pattern looks atomic and elegant, but it has a subtle MySQL gotcha:
+  // InnoDB reserves the next AUTO_INCREMENT value BEFORE evaluating the
+  // duplicate-key check. On every "resume" call (where the row already
+  // exists and only the UPDATE branch runs), an attempt_id is silently
+  // burned. So a student who started+resumed twice (3 calls in total)
+  // would consume IDs 82, 83, 84 — and the next student would get id 85.
+  //
+  // Fix: explicit SELECT-then-UPDATE-or-INSERT, wrapped in a transaction
+  // with SELECT FOR UPDATE for the same race-condition safety the UPSERT
+  // gave us. AUTO_INCREMENT now only advances on real INSERTs.
   let attemptId;
   let attemptCount;
+  let attemptStatus;
+  let attemptStartTime;
   let timeRemaining;
   let savedAnswers = [];
 
-  // Use UPSERT to handle initial creation or increment atomically
-  // We increment attempt_count on every call to startAttempt (Resume/Start)
-  // as per the requirement to track re-entries.
-  await executeQuery(
-    `INSERT INTO student_test_attempts (student_id, test_id, attempt_count, status, attempt_start_time)
-     VALUES (?, ?, 1, 'InProgress', NOW())
-     ON DUPLICATE KEY UPDATE
-       attempt_count = CASE
-         WHEN status = 'Submitted' THEN attempt_count
-         WHEN attempt_count > ? THEN attempt_count
-         ELSE attempt_count + 1
-       END`,
-    [userId, testId, MAX_TEST_ATTEMPTS]
-  );
+  await withTransaction(async (conn) => {
+    const [existing] = await conn.execute(
+      `SELECT attempt_id, attempt_count, status, attempt_start_time
+       FROM student_test_attempts
+       WHERE student_id = ? AND test_id = ?
+       FOR UPDATE`,
+      [userId, testId]
+    );
 
-  // Now fetch the record securely to check state and calculate time
-  const rows = await executeQuery(
-    `SELECT attempt_id, attempt_count, status, attempt_start_time
-     FROM student_test_attempts WHERE student_id = ? AND test_id = ?`,
-    [userId, testId]
-  );
+    if (existing.length) {
+      // Row exists — UPDATE in place. No AUTO_INCREMENT change.
+      const cur = existing[0];
+      let newCount = cur.attempt_count;
 
-  const attempt = rows[0];
-  attemptId = attempt.attempt_id;
-  attemptCount = attempt.attempt_count;
+      // Mirror the original CASE behaviour exactly:
+      //   - If status is Submitted, don't increment (controller will throw).
+      //   - If already past MAX, don't increment further (controller throws).
+      //   - Otherwise, count this as a new resume.
+      if (cur.status !== 'Submitted' && cur.attempt_count <= MAX_TEST_ATTEMPTS) {
+        newCount = cur.attempt_count + 1;
+        await conn.execute(
+          'UPDATE student_test_attempts SET attempt_count = ? WHERE attempt_id = ?',
+          [newCount, cur.attempt_id]
+        );
+      }
+
+      attemptId        = cur.attempt_id;
+      attemptCount     = newCount;
+      attemptStatus    = cur.status;
+      attemptStartTime = cur.attempt_start_time;
+    } else {
+      // Fresh attempt — INSERT (this is the ONLY path that advances
+      // AUTO_INCREMENT, so IDs stay gap-free between students).
+      const [result] = await conn.execute(
+        `INSERT INTO student_test_attempts (student_id, test_id, attempt_count, status, attempt_start_time)
+         VALUES (?, ?, 1, 'InProgress', NOW())`,
+        [userId, testId]
+      );
+      attemptId        = result.insertId;
+      attemptCount     = 1;
+      attemptStatus    = 'InProgress';
+      attemptStartTime = new Date();
+    }
+  });
+
+  // Synthesise the same shape the old code expected from its read-back query
+  // so downstream logic doesn't need to know which branch we took above.
+  const attempt = {
+    attempt_id:         attemptId,
+    attempt_count:      attemptCount,
+    status:             attemptStatus,
+    attempt_start_time: attemptStartTime,
+  };
 
   if (attempt.status === 'Submitted') {
     throw new AppError('You have already submitted this test.', 403);

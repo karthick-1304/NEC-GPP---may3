@@ -18,7 +18,10 @@
       "Bash(node --check src/services/emailGate.service.js)",
       "Bash(node --check src/services/questionParse.service.js)",
       "Bash(node --check src/controllers/system.controller.js)",
-      "Bash(node --check src/controllers/test.controller.js)"
+      "Bash(node --check src/controllers/test.controller.js)",
+      "Bash(node --check src/validators/test.validator.js)",
+      "Bash(npx tsc *)",
+      "Bash(node --check src/scheduler.js)"
     ]
   }
 }

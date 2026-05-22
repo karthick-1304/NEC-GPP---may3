@@ -125,9 +125,14 @@ export const TestCard = ({ test, onShowParticipation }: Props) => {
         <div className="mt-3 space-y-1 text-xs text-slate-600">
           <Row icon={<Calendar className="h-3 w-3" />} label="Starts" value={formatDateTime(test.start_time)} />
           <Row icon={<Hourglass className="h-3 w-3" />} label="Ends"   value={formatDateTime(test.end_time)} />
-          <p className="text-[0.7rem] text-slate-800 italic mt-1">
-            Auto-evaluated ~5 min after End time; results emailed to creator + Admins. Test will get deleted after end time automatically.
-          </p>
+          {/* Operational note — only the people who can *act* on it (creators,
+              dept heads, admins) need to see it. Students don't need to know
+              about the auto-eval timing or post-end deletion. */}
+          {!isStudent && (
+            <p className="text-[0.7rem] text-slate-800 italic mt-1">
+              Auto-evaluated ~5 min after End time; results emailed to creator + Admins. Test will get deleted after end time automatically.
+            </p>
+          )}
         </div>
 
         {isStudent && (

@@ -30,7 +30,14 @@ const baseShape = {
 const studentSchema = z.object({
   ...baseShape,
   dept_code:  z.string().min(2, 'Select any one dept').max(20),
-  batch_year: z.string().min(1, 'Batch year is required').max(10),
+  // Batch year is stored as a string but must represent a positive integer
+  // (start year of the batch, e.g. "2022"). Mirrors the backend's
+  // /^[1-9]\d*$/ regex so the frontend rejects "0", negative, and non-numeric
+  // input up-front instead of waiting for a 400 from the API.
+  batch_year: z.string()
+    .min(1, 'Batch year is required')
+    .max(10)
+    .regex(/^[1-9]\d*$/, 'Batch year must be a positive number greater than 0'),
   reg_num:    z.string().min(1).max(50).regex(/^[a-zA-Z0-9]+$/, 'Alphanumeric only'),
 });
 const staffSchema = z.object({

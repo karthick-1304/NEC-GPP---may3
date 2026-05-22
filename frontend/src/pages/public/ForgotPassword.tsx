@@ -153,6 +153,11 @@ function EmailStep({ onDone }: { onDone: (email: string) => void }) {
       </div>
       <form onSubmit={handleSubmit(submit)} className="space-y-4" noValidate>
         <Field label="Email" htmlFor="fp-email" required error={errors.email?.message}>
+          {/* Use `autoComplete="email"` (NOT `username`) so password managers
+              don't conflate this email with the one typed on the Login page.
+              Without this separation, Chrome would offer to save the
+              forgot-password email paired with whatever password was just
+              typed somewhere else. */}
           <Input id="fp-email" type="email" autoComplete="email" placeholder="you@nec.edu.in"
                  leftIcon={<Mail className="h-4 w-4" />} invalid={!!errors.email} {...register('email')} />
         </Field>
@@ -190,7 +195,11 @@ function OtpStep({ email, onBack, onDone }: { email: string; onBack: () => void;
       </div>
       <form onSubmit={handleSubmit(submit)} className="space-y-4" noValidate>
         <Field label="6-digit OTP" htmlFor="fp-otp" required error={errors.otp?.message}>
+          {/* `one-time-code` tells iOS/Safari and Chrome to surface the OTP
+              from SMS or email autofill — without it, the user has to type
+              all 6 digits manually even when the OS detected the code. */}
           <Input id="fp-otp" inputMode="numeric" maxLength={6} placeholder="••••••"
+                 autoComplete="one-time-code"
                  leftIcon={<ShieldCheck className="h-4 w-4" />}
                  className="tracking-[0.5em] text-center font-mono text-lg"
                  invalid={!!errors.otp} {...register('otp')} />

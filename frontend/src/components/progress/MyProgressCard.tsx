@@ -55,10 +55,10 @@ export const MyProgressCard = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-        <Stat tone="amber"  icon={<Target className="h-3 w-3" />}        label="Practice"    value={data.general.practice_score} />
-        <Stat tone="navy"   icon={<ClipboardList className="h-3 w-3" />} label="Tests"       value={data.general.test_score} />
-        <Stat tone="sky"    icon={<Layers className="h-3 w-3" />}        label="Lev 1 sets"  value={data.general.lev_1_completed} />
-        <Stat tone="violet" icon={<Layers className="h-3 w-3" />}        label="Lev 2 sets"  value={data.general.lev_2_completed} />
+        <Stat tone="amber"  icon={<Target className="h-3 w-3" />}        label="Practice Score"    value={data.general.practice_score} />
+        <Stat tone="navy"   icon={<ClipboardList className="h-3 w-3" />} label="Test Score"       value={data.general.test_score} />
+        <Stat tone="sky"    icon={<Layers className="h-3 w-3" />}        label="Lev 1 Completed"  value={data.general.lev_1_completed} />
+        <Stat tone="violet" icon={<Layers className="h-3 w-3" />}        label="Lev 2 Completed"  value={data.general.lev_2_completed} />
         <Stat tone="green"  icon={<BookMarked className="h-3 w-3" />}    label="Topics done" value={data.general.topics_completed} />
       </div>
 

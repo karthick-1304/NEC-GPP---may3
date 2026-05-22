@@ -7,8 +7,8 @@ import { cn } from '@/lib/cn';
 
 const links = [
   { to: '/',             label: 'Home' },
-  { to: '/about',        label: 'About Us' },
   { to: '/about-portal', label: 'About Portal' },
+  { to: '/about',        label: 'About Us' },
 ];
 
 export const PublicLayout = () => {

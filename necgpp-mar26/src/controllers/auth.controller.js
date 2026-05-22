@@ -202,7 +202,11 @@ export const login = catchAsync(async (req, res) => {
 // ─── REFRESH TOKEN ────────────────────────────────────────────────────────────
 export const refresh = catchAsync(async (req, res) => {
   const cookie = req.cookies.refreshToken;
-  if (!cookie) throw new AppError('No refresh token. Please log in again.', 401);
+  // Anonymous visitors hitting public pages also call this endpoint as part
+  // of the frontend's AuthContext bootstrap. There's no refresh cookie because
+  // they aren't signed in — that's expected, not an error. Tag the error with
+  // `logLevel: 'info'` so the global handler doesn't shout about it.
+  if (!cookie) throw new AppError('No refresh token. Please log in again.', 401, null, { logLevel: 'info' });
 
   // Cookie format: "family:rawToken"
   const colonIdx   = cookie.indexOf(':');
@@ -210,6 +214,7 @@ export const refresh = catchAsync(async (req, res) => {
   const rawToken   = cookie.substring(colonIdx + 1);
 
   if (!family || !rawToken) {
+    // Malformed cookie is more suspicious than missing — keep at default level.
     throw new AppError('Malformed refresh token. Please log in again.', 401);
   }
 
@@ -217,9 +222,10 @@ export const refresh = catchAsync(async (req, res) => {
   const stored = await redisGet(`refresh:${family}`);
 
   if (!stored) {
-    // Token not found — expired naturally
+    // Token not found in Redis — expired naturally, or the user logged out
+    // elsewhere. Common and benign; quiet log.
     clearRefreshCookie(res);
-    throw new AppError('Refresh token expired or invalid. Please log in again.', 401);
+    throw new AppError('Refresh token expired or invalid. Please log in again.', 401, null, { logLevel: 'info' });
   }
 
   const { userId, tokenHash: storedHash, prevHash, prevHashExpires } = JSON.parse(stored);

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ArrowRight, Building2, Users, Trophy, Heart,
+  ArrowRight, Building2, Trophy, Heart,
   Eye, GraduationCap, Sparkles, BookOpen, Code2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -33,6 +33,7 @@ const MENTORS: Person[] = [
   },
   {
     name: 'Dr. S. Kalaiselvi',
+    qual: 'M.E., PhD',
     role: 'Associate Professor, Department of CSE, NEC',
     img: '/team/kalaiselvi.jpg',
   },
@@ -108,10 +109,9 @@ export default function AboutUsPage() {
           </p>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid sm:grid-cols-3 gap-4">
           {[
             { icon: Building2, k: 'Est. 1984',  l: 'Decades of teaching' },
-            { icon: Users,     k: 'NAAC A+',    l: 'Accredited' },
             { icon: Trophy,    k: 'AICTE',      l: 'Recognised' },
             { icon: Heart,     k: 'Autonomous', l: 'Anna University affiliated' },
           ].map((s) => (

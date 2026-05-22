@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/Input';
 import { Field } from '@/components/ui/Field';
 import { Badge } from '@/components/ui/Badge';
 import { ConfirmDialog } from '@/components/ui/Dialog';
+import { InfoNote } from '@/components/ui/InfoNote';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { authApi } from '@/lib/api/auth';
 import { usersApi } from '@/lib/api/users';
@@ -91,6 +92,11 @@ function OverviewTab() {
           </div>
           <div className="mt-5 pt-5 border-t border-slate-100 space-y-3 text-sm">
             <Row icon={<Mail className="h-4 w-4" />} label="Email" value={profile.email} />
+            {/* Reg number sits with the identity, right under email — it's an
+                identifier (like the email) not a "progress" stat. */}
+            {profile.role === 'Student' && profile.reg_num && (
+              <Row icon={<Hash className="h-4 w-4" />} label="Reg No." value={profile.reg_num} />
+            )}
             {profile.phone_number && (
               <Row icon={<Phone className="h-4 w-4" />} label="Phone" value={profile.phone_number} />
             )}
@@ -117,13 +123,14 @@ function OverviewTab() {
         {profile.role === 'Student' && (
           <>
             <SectionCard title="Practice progress" icon={<Target className="h-4 w-4" />}>
+              {/* Reg No used to live here — moved up next to Email since it's
+                  an identifier, not a progress stat. */}
               <div className="grid sm:grid-cols-3 gap-3">
                 <Stat label="Practice Score"  value={profile.practice_score ?? 0}  icon={<Target className="h-4 w-4" />} tone="amber" />
                 <Stat label="Test Score"      value={profile.test_score ?? 0}      icon={<ClipboardList className="h-4 w-4" />} tone="navy" />
                 <Stat label="Topics Cleared"  value={profile.topics_completed ?? 0} icon={<BookMarked className="h-4 w-4" />} tone="green" />
                 <Stat label="Level 1 Sets"    value={profile.lev_1_completed ?? 0} icon={<Layers className="h-4 w-4" />} tone="sky" />
                 <Stat label="Level 2 Sets"    value={profile.lev_2_completed ?? 0} icon={<Layers className="h-4 w-4" />} tone="violet" />
-                <Stat label="Reg No."         value={profile.reg_num ?? '—'}       icon={<Hash className="h-4 w-4" />} tone="slate" />
               </div>
             </SectionCard>
             <SectionCard title="Academics" icon={<GraduationCap className="h-4 w-4" />}>
@@ -344,11 +351,25 @@ function SessionsTab() {
         </Button>
       </div>
 
+      {/* Session revocation works by invalidating refresh tokens — other
+          devices stop working only when their short-lived access token
+          expires and they try to refresh. Worst-case lag = access-token TTL
+          (~15 min). Tell the user this so they don't expect a hard cut. */}
+      <InfoNote tone="info" className="mt-4">
+        Other devices will be signed out within <strong>15 minutes</strong> maximum — the moment their current
+        session expires and tries to renew.
+      </InfoNote>
+
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
         title="Sign out other sessions?"
         description="Other browsers and devices currently signed in will be signed out. This session will remain active."
+        info={
+          <InfoNote tone="info">
+            Other devices stop working within 15 minutes — when their current session expires.
+          </InfoNote>
+        }
         confirmText="Sign out others"
         loading={m.isPending}
         onConfirm={async () => {

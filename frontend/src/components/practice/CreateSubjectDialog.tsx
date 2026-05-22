@@ -10,6 +10,7 @@ import { Dialog } from '@/components/ui/Dialog';
 import { Field } from '@/components/ui/Field';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { InfoNote } from '@/components/ui/InfoNote';
 import { MultiSelect } from '@/components/ui/MultiSelect';
 import type { MultiOption } from '@/components/ui/MultiSelect';
 
@@ -102,6 +103,10 @@ export const CreateSubjectDialog = ({ open, onOpenChange }: Props) => {
       </div>
 
       <form onSubmit={handleSubmit(submit)} noValidate className="space-y-5">
+        <InfoNote tone="mail">
+          All collaborators of this subject will be emailed about the creation.
+        </InfoNote>
+
         <Field label="Subject name" htmlFor="sub-name" required error={errors.subject_name?.message}
                hint="A unique name across the platform.">
           <Input

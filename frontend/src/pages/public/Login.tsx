@@ -60,7 +60,14 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
-                autoComplete="email"
+                // `username` — not `email` — is the autocomplete value that
+                // tells Chrome / iCloud Keychain / 1Password "this is the
+                // login identifier, pair it with the current-password field
+                // below for credential storage". Using plain `email` here
+                // causes browsers to mis-pair: a previously typed email from
+                // the forgot-password page can end up suggested as the
+                // username to save alongside the password just typed here.
+                autoComplete="username"
                 placeholder="you@nec.edu.in"
                 leftIcon={<Mail className="h-4 w-4" />}
                 invalid={!!errors.email}

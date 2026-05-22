@@ -50,13 +50,31 @@ export const authLimiter = rateLimit({
 // Window  : 15 minutes
 // Max     : 5 requests
 // Key     : IP + email  →  "otp:{ip}:{email}"
-// Counts successful requests : YES
+// Counts successful requests : YES  (only 2xx responses consume quota)
+// Counts failed requests     : NO   ← important: see comment below
 // Applied : forgot-password / send-OTP route
+//
+// `skipFailedRequests: true` is the key fix for the OTP cooldown / rate-limit
+// conflict. The flow used to be:
+//
+//   1. User clicks "Send OTP"  → bucket -1, OTP sent, 2-min cooldown set.
+//   2. User clicks again during cooldown → bucket -1 (still increments!),
+//      controller throws 429 "wait Ns".
+//   3. User keeps clicking during cooldown → bucket drained.
+//   4. After cooldown expires → otpLimiter itself rejects with 429
+//      "wait 15 minutes". User is locked out even though they only ever
+//      caused ONE successful send.
+//
+// With skipFailedRequests, the limiter listens for the response `finish`
+// event and decrements the bucket back when statusCode >= 400. So
+// cooldown-rejected attempts (429), validation rejections (400), etc. no
+// longer eat quota — only actual successful OTP sends (200) do.
 export const otpLimiter = rateLimit({
-  windowMs:        15 * 60 * 1000,
-  max:             5,
-  standardHeaders: true,
-  legacyHeaders:   false,
+  windowMs:               15 * 60 * 1000,
+  max:                    5,
+  skipFailedRequests:     true,
+  standardHeaders:        true,
+  legacyHeaders:          false,
   keyGenerator: (req) => {
     const ip    = req.ip ?? req.socket?.remoteAddress ?? 'unknown';
     const email = req.body?.email?.toLowerCase()?.trim() || 'unknown';

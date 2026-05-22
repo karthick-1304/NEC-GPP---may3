@@ -80,6 +80,9 @@ export const testsApi = {
       test_name: string; start_time: string; end_time: string;
       duration_minutes: number; negative_marking: boolean;
       assignments: Array<{ dept_id: number; academic_year: string }>;
+      /** Specific (dept × batch) pairs to DELETE — only honoured when the
+       *  test hasn't started yet; backend rejects with 400 otherwise. */
+      remove_assignments: Array<{ dept_id: number; academic_year: string }>;
       questions: QuestionInput[];
     }>,
   ) => {

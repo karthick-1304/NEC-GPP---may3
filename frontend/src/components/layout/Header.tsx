@@ -54,8 +54,8 @@ export const Header = () => {
   // ─── Student stats chips ─────────────────────────────────────────────────
   const isStudent = user.role === 'Student';
   const statChips = isStudent ? ([
-    { icon: Target,     label: 'Practice', value: user.practice_score ?? 0,   tone: 'amber' as const },
-    { icon: ClipboardList, label: 'Tests',  value: user.test_score     ?? 0,   tone: 'navy'  as const },
+    { icon: Target,     label: 'Practice score', value: user.practice_score ?? 0,   tone: 'amber' as const },
+    { icon: ClipboardList, label: 'Test score',  value: user.test_score     ?? 0,   tone: 'navy'  as const },
     { icon: Layers,     label: 'Lev 1',     value: user.lev_1_completed ?? 0,  tone: 'sky'   as const },
     { icon: Layers,     label: 'Lev 2',     value: user.lev_2_completed ?? 0,  tone: 'violet'as const },
     { icon: BookMarked, label: 'Topics',    value: user.topics_completed ?? 0, tone: 'green' as const },

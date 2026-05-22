@@ -19,8 +19,28 @@ const handleQueryExecutionTimeout  = () => new AppError('The request took too lo
 const handleJWTInvalid             = () => new AppError('Invalid token. Please log in again.', 401);
 const handleJWTExpired             = () => new AppError('Your session has expired. Please log in again.', 401);
 
+// Pick which log level to use. AppError can opt-in to a lower level via
+// `logLevel: 'info' | 'warn' | 'error'` — useful for *expected* 4xx failures
+// (e.g. anonymous /auth/refresh) that would otherwise flood the log with
+// red error lines that don't represent real problems.
+const pickLevel = (err, defaultLevel) => {
+  if (err.logLevel && ['info', 'warn', 'error'].includes(err.logLevel)) {
+    return err.logLevel;
+  }
+  return defaultLevel;
+};
+
 const sendErrorDev = (err, req, res) => {
-  logger.error('DEV ERROR', { error: err.message, stack: err.stack, url: req.originalUrl, method: req.method, body: req.body });
+  const level = pickLevel(err, 'error');
+  // `info` skips the stack trace — for expected 401s the trace is noise.
+  if (level === 'info') {
+    logger.info('Expected client error', {
+      message: err.message, statusCode: err.statusCode,
+      url: req.originalUrl, method: req.method,
+    });
+  } else {
+    logger[level]('DEV ERROR', { error: err.message, stack: err.stack, url: req.originalUrl, method: req.method, body: req.body });
+  }
   return res.status(err.statusCode).json({
     success: false, message: err.message, statusCode: err.statusCode,
     errors: err.errors || undefined, stack: err.stack,
@@ -30,7 +50,8 @@ const sendErrorDev = (err, req, res) => {
 
 const sendErrorProd = (err, req, res) => {
   if (err.isOperational) {
-    logger.warn('Operational error', { message: err.message, statusCode: err.statusCode, url: req.originalUrl, userId: req.user?.userId });
+    const level = pickLevel(err, 'warn');
+    logger[level]('Operational error', { message: err.message, statusCode: err.statusCode, url: req.originalUrl, userId: req.user?.userId });
     return res.status(err.statusCode).json({
       success: false,
       message: err.message,
